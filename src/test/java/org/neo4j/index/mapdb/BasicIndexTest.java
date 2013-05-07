@@ -42,7 +42,7 @@ public class BasicIndexTest {
     }
 
     @Test
-    public void testInsertPerformance() throws Exception {
+    public void testInsertPerformanceWithMapDbIndex() throws Exception {
         long time=System.currentTimeMillis();
         tx = db.beginTx();
         for (int i=0;i<COUNT;i++) {
@@ -53,7 +53,7 @@ public class BasicIndexTest {
         tx.success();
         tx.finish();
         time = System.currentTimeMillis() - time;
-        System.out.println("Creating "+COUNT+" nodes with index took "+time+" ms.");
+        System.out.println("Creating "+COUNT+" nodes with mapdb-index took "+time+" ms.");
     }
 
     @Test
@@ -67,7 +67,7 @@ public class BasicIndexTest {
         tx.success();
         tx.finish();
         time = System.currentTimeMillis() - time;
-        System.out.println("Creating "+COUNT+" nodes with index took "+time+" ms.");
+        System.out.println("Creating "+COUNT+" nodes without index took "+time+" ms.");
     }
 
     @Before
