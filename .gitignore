@@ -1,0 +1,11 @@
+mapdb-*
+test.db
+graph.db
+target
+*.iml
+*.ipr
+*.iws
+.idea
+.DS_Store
+.settings
+
