@@ -88,21 +88,7 @@ public abstract class BasicIndexTest {
         tx.finish();
         }
         time = System.currentTimeMillis() - time;
-        System.out.println("Creating "+COUNT+" nodes with "+getClass().getSimpleName()+" took "+time+" ms.");
-    }
-
-    @Test
-    public void testInsertPerformanceWithoutIndex() throws Exception {
-        long time=System.currentTimeMillis();
-        tx = db.beginTx();
-        for (int i=0;i<COUNT;i++) {
-            final Node node = db.createNode();
-            node.setProperty(PROPERTY, i);
-        }
-        tx.success();
-        tx.finish();
-        time = System.currentTimeMillis() - time;
-        System.out.println("Creating "+COUNT*RUNS+" nodes without index took "+time+" ms.");
+        System.out.println("Creating "+COUNT*RUNS+" nodes with "+getClass().getSimpleName()+" took "+time+" ms.");
     }
 
     @Before
