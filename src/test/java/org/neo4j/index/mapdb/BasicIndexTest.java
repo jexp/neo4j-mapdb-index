@@ -123,6 +123,7 @@ public abstract class BasicIndexTest {
 
     @After
     public void tearDown() throws Exception {
+        if (indexDefinition==null) return;
         tx = db.beginTx();
         indexDefinition.drop();
         tx.success();
