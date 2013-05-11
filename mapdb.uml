@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>org.neo4j.index.mapdb</OriginalElement>
+  <nodes>
+    <node x="429.0" y="212.0">org.neo4j.index.mapdb.MapDbSchemaIndexProvider.MapDbIndex</node>
+    <node x="117.5" y="22.0">org.neo4j.kernel.lifecycle.Lifecycle</node>
+    <node x="0.0" y="256.0">org.neo4j.kernel.api.index.SchemaIndexProvider</node>
+    <node x="406.25" y="0.0">org.neo4j.kernel.api.index.IndexAccessor</node>
+    <node x="648.25" y="11.0">org.neo4j.kernel.api.index.IndexPopulator</node>
+    <node x="388.25" y="556.0">org.neo4j.index.mapdb.MapDbSchemaIndexProvider</node>
+    <node x="123.25" y="578.0">org.neo4j.kernel.extension.KernelExtensionFactory</node>
+    <node x="282.75" y="746.0">org.neo4j.index.mapdb.MapDbIndexProviderFactory</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="org.neo4j.index.mapdb.MapDbSchemaIndexProvider.MapDbIndex" target="org.neo4j.kernel.api.index.IndexPopulator">
+      <point x="103.25" y="-147.0" />
+      <point x="738.75" y="187.0" />
+      <point x="753.75" y="187.0" />
+      <point x="0.0" y="70.0" />
+    </edge>
+    <edge source="org.neo4j.index.mapdb.MapDbSchemaIndexProvider.MapDbIndex" target="org.neo4j.kernel.api.index.IndexAccessor">
+      <point x="-103.25" y="-147.0" />
+      <point x="532.25" y="187.0" />
+      <point x="517.25" y="187.0" />
+      <point x="0.0" y="81.0" />
+    </edge>
+    <edge source="org.neo4j.index.mapdb.MapDbIndexProviderFactory" target="org.neo4j.kernel.extension.KernelExtensionFactory">
+      <point x="-118.33333333333326" y="-37.0" />
+      <point x="341.91666666666674" y="721.0" />
+      <point x="245.75" y="721.0" />
+      <point x="0.0" y="48.0" />
+    </edge>
+    <edge source="org.neo4j.kernel.api.index.SchemaIndexProvider" target="org.neo4j.kernel.lifecycle.Lifecycle">
+      <point x="0.0" y="-103.0" />
+      <point x="0.0" y="59.0" />
+    </edge>
+    <edge source="org.neo4j.index.mapdb.MapDbSchemaIndexProvider" target="org.neo4j.kernel.api.index.SchemaIndexProvider">
+      <point x="-96.0" y="-70.0" />
+      <point x="436.25" y="531.0" />
+      <point x="204.5" y="531.0" />
+      <point x="0.0" y="103.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.7773809523809524" x="209.728943338438" y="318.728943338438" />
+  <SelectedNodes>
+    <node>org.neo4j.index.mapdb.MapDbSchemaIndexProvider.MapDbIndex</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Methods</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

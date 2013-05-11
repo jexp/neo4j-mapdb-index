@@ -5,11 +5,14 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.index.*;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import static org.neo4j.index.mapdb.MapDbIndexProviderFactory.PROVIDER_DESCRIPTOR;
 
 /**
  * @author mh
@@ -24,14 +27,26 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     private final Map<Long, MapDbIndex> indexes = new CopyOnWriteHashMap<Long, MapDbIndex>();
     private final DB db;
 
-    public MapDbSchemaIndexProvider() {
-        super(MapDbIndexProviderFactory.PROVIDER_DESCRIPTOR, PRIORITY);
+    public MapDbSchemaIndexProvider(Config config) {
+        super(PROVIDER_DESCRIPTOR, PRIORITY);
         db = DBMaker
-                .newFileDB(new File("mapdb-index")) // todo
+                .newFileDB(getIndexFile(config))
                 .compressionEnable()
                 .closeOnJvmShutdown()
                 .make();
 
+    }
+
+    private File getIndexFile(Config config) {
+        final File directory = getDirectory(config);
+        return new File(directory,"mapdb-index-tree.db");
+    }
+
+    private File getDirectory(Config config) {
+        final File rootDirectory = getRootDirectory(config, PROVIDER_DESCRIPTOR.getKey());
+        final File indexDirectory = new File(rootDirectory, PROVIDER_DESCRIPTOR.getVersion());
+        if ((indexDirectory.exists() && indexDirectory.isDirectory()) || indexDirectory.mkdirs()) return indexDirectory;
+        throw new RuntimeException("Error creating directory "+indexDirectory+" for index "+PROVIDER_DESCRIPTOR);
     }
 
     @Override
@@ -170,16 +185,14 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
          */
         @Override
         public IndexReader newReader() {
-            return new MapDbMemoryReader((BTreeMap<Object, long[]>) indexData.snapshot());
+            return new MapDbIndexReader((BTreeMap<Object, long[]>) indexData.snapshot());
         }
     }
 
-    private static class MapDbMemoryReader implements IndexReader {
+    private static class MapDbIndexReader implements IndexReader {
         private BTreeMap<Object, long[]> snapshot;
 
-        MapDbMemoryReader(BTreeMap<Object, long[]> snapshot) {
-            // todo this is repeatable read semantics for the in-memory index
-            // todo this.indexData = new HashMap<Object, List<Long>>(indexData);
+        MapDbIndexReader(BTreeMap<Object, long[]> snapshot) {
             this.snapshot = snapshot;
         }
 

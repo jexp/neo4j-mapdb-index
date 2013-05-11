@@ -2,6 +2,7 @@ package org.neo4j.index.mapdb;
 
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
@@ -12,9 +13,10 @@ public class MapDbIndexProviderFactory extends KernelExtensionFactory<MapDbIndex
     public static final SchemaIndexProvider.Descriptor PROVIDER_DESCRIPTOR =
             new SchemaIndexProvider.Descriptor(KEY, "1.0");
 
-    private final MapDbSchemaIndexProvider singleProvider; // todo check if it makes sense to rather have one mapdb backing one index
+    private final MapDbSchemaIndexProvider singleProvider;
 
     public interface Dependencies {
+        Config getConfig();
     }
 
     public MapDbIndexProviderFactory() {
@@ -28,7 +30,7 @@ public class MapDbIndexProviderFactory extends KernelExtensionFactory<MapDbIndex
 
     @Override
     public Lifecycle newKernelExtension(Dependencies dependencies) throws Throwable {
-        return hasSingleProvider() ? singleProvider : new MapDbSchemaIndexProvider();
+        return hasSingleProvider() ? singleProvider : new MapDbSchemaIndexProvider(dependencies.getConfig());
     }
 
     private boolean hasSingleProvider() {
