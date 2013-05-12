@@ -35,7 +35,7 @@ public abstract class BasicIndexTest {
 
     @Test
     public void testCreateAddIndex() throws Exception {
-        final ResourceIterable<IndexDefinition> indexes = db.schema().getIndexes(LABEL);
+        final Iterable<IndexDefinition> indexes = db.schema().getIndexes(LABEL);
         final IndexDefinition index = IteratorUtil.single(indexes);
         assertEquals(LABEL.name(), index.getLabel().name());
         tx = db.beginTx();
@@ -88,7 +88,8 @@ public abstract class BasicIndexTest {
         tx.finish();
         }
         time = System.currentTimeMillis() - time;
-        System.out.println("Creating "+COUNT*RUNS+" nodes with "+getClass().getSimpleName()+" took "+time+" ms.");
+        final String type = propertyValue.from(0).getClass().getSimpleName();
+        System.out.println("Creating "+COUNT*RUNS+" nodes with "+getClass().getSimpleName()+" for "+type+" properties took "+time+" ms.");
     }
 
     @Before

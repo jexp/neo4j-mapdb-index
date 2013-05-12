@@ -99,21 +99,26 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             if (idx!=-1) return;
             nodes = Arrays.copyOfRange(nodes, 0, nodes.length + 1);
             nodes[nodes.length-1]=nodeId;
-            indexData.put(propertyValue, nodes);
+            indexData.replace(propertyValue, nodes);
         }
 
         private void removed(long nodeId, Object propertyValue) {
             long[] nodes = indexData.get(propertyValue);
-            if (nodes==null || nodes.length==0) return;
+            if (nodes==null || nodes.length ==0) return;
             int idx=indexOf(nodes,nodeId);
             if (idx==-1) return;
-            System.arraycopy(nodes,idx,nodes,idx-1,nodes.length-idx-1);
-            nodes = Arrays.copyOfRange(nodes, 0, nodes.length - 1);
-            indexData.put(propertyValue, nodes);
+            final int existingCount = nodes.length;
+            if (existingCount == 1) {
+                indexData.remove(propertyValue);
+                return;
+            }
+            System.arraycopy(nodes,idx,nodes,idx-1, existingCount-idx-1);
+            nodes = Arrays.copyOfRange(nodes, 0, existingCount - 1);
+            indexData.replace(propertyValue, nodes);
         }
 
         private int indexOf(long[] nodes, long nodeId) {
-            for (int i = 0; i < nodes.length; i++) {
+            for (int i = nodes.length - 1; i != 0; i--) {
                 if (nodes[i]==nodeId) return i;
             }
             return -1;
@@ -181,7 +186,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
 
         /**
          * @return a new {@link IndexReader} responsible for looking up results in the index.
-         * TODO The returned reader must honor repeatable reads.
+         * The returned reader must honor repeatable reads.
          */
         @Override
         public IndexReader newReader() {
