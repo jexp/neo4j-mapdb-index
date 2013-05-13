@@ -47,9 +47,6 @@ public abstract class BasicIndexTest {
         assertEquals(node, IteratorUtil.single(nodes));
     }
 
-    interface PropertyValue {
-        Object from(int value);
-    }
     @Test
     public void testInsertPerformanceWithIntValues() throws Exception {
         insertManyNodesWithIndex(new PropertyValue() {
