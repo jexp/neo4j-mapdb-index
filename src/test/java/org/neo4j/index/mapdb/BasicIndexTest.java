@@ -5,7 +5,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.*;
-import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.impl.util.FileUtils;
@@ -35,16 +34,20 @@ public abstract class BasicIndexTest {
 
     @Test
     public void testCreateAddIndex() throws Exception {
+        tx = db.beginTx();
         final Iterable<IndexDefinition> indexes = db.schema().getIndexes(LABEL);
         final IndexDefinition index = IteratorUtil.single(indexes);
         assertEquals(LABEL.name(), index.getLabel().name());
-        tx = db.beginTx();
         final Node node = db.createNode(LABELS);
         node.setProperty(PROPERTY, 42);
         tx.success();
         tx.finish();
+
+        tx = db.beginTx();
         final ResourceIterable<Node> nodes = db.findNodesByLabelAndProperty(LABEL, PROPERTY, 42);
         assertEquals(node, IteratorUtil.single(nodes));
+        tx.success();
+        tx.finish();
     }
 
     @Test
@@ -75,14 +78,14 @@ public abstract class BasicIndexTest {
     public void insertManyNodesWithIndex(PropertyValue propertyValue) throws Exception {
         long time=System.currentTimeMillis();
         for (int run=0;run<RUNS;run++) {
-        tx = db.beginTx();
-        for (int i=0;i<COUNT;i++) {
-            final Node node = db.createNode(LABELS);
-            // todo concurrentmodification exception node.setProperty(PROPERTY, 42);
-            node.setProperty(PROPERTY, propertyValue.from(i));
-        }
-        tx.success();
-        tx.finish();
+            tx = db.beginTx();
+            for (int i=0;i<COUNT;i++) {
+                final Node node = db.createNode(LABELS);
+                // todo concurrentmodification exception node.setProperty(PROPERTY, 42);
+                node.setProperty(PROPERTY, propertyValue.from(i));
+            }
+            tx.success();
+            tx.finish();
         }
         time = System.currentTimeMillis() - time;
         final String type = propertyValue.from(0).getClass().getSimpleName();
@@ -98,11 +101,13 @@ public abstract class BasicIndexTest {
 
     protected void createIndex() {
         tx = db.beginTx();
-        final IndexCreator indexCreator = db.schema().indexCreator(LABEL).on(PROPERTY);
-        indexDefinition = indexCreator.create();
+        final IndexDefinition indexDef = db.schema().indexFor(LABEL).on(PROPERTY).create();
         tx.success();
         tx.finish();
-        db.schema().awaitIndexOnline(indexDefinition, 5, TimeUnit.SECONDS);
+        tx = db.beginTx();
+        db.schema().awaitIndexOnline( indexDef, 10, TimeUnit.SECONDS );
+        tx.success();
+        tx.finish();
     }
 
     @After

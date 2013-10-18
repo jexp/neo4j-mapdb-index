@@ -3,9 +3,9 @@ package org.neo4j.index.mapdb;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.index.*;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.api.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
 import java.io.File;
@@ -58,11 +58,16 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     @Override
-    public MapDbIndex getOnlineAccessor(long indexId) {
+    public MapDbIndex getOnlineAccessor(long indexId, IndexConfiguration indexConfiguration) {
         MapDbIndex index = indexes.get(indexId);
         if (index == null || index.state != InternalIndexState.ONLINE)
             throw new IllegalStateException("Index " + indexId + " not online yet");
         return index;
+    }
+
+    @Override
+    public String getPopulationFailure(long l) throws IllegalStateException {
+        return null;
     }
 
     @Override
@@ -72,7 +77,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     @Override
-    public MapDbIndex getPopulator(long indexId) {
+    public IndexPopulator getPopulator(long indexId, IndexConfiguration indexConfiguration) {
         BTreeMap<Object,long[]> map = db.getTreeMap(String.valueOf(indexId));
         MapDbIndex index = new MapDbIndex(map,db);
         indexes.put(indexId, index);
@@ -181,6 +186,10 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         }
 
         @Override
+        public void markAsFailed(String s) throws IOException {
+        }
+
+        @Override
         public void close() {
             db.commit();
         }
@@ -203,9 +212,9 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         }
 
         @Override
-        public Iterator<Long> lookup(Object value) {
+        public PrimitiveLongIterator lookup(Object value) {
             final long[] result = snapshot.get(value);
-            return result == null || result.length==0 ? IteratorUtil.<Long>emptyIterator() : new Iterator<Long>() {
+            return new PrimitiveLongIterator() {
                 int idx=0;
                 private final int length = result.length;
 
@@ -215,13 +224,8 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
                 }
 
                 @Override
-                public Long next() {
+                public long next() {
                     return result[idx++];
-                }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
                 }
             };
         }
