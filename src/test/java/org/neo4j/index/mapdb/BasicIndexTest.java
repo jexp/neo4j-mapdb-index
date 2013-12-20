@@ -10,6 +10,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.test.ImpermanentGraphDatabase;
+import org.neo4j.test.TestGraphDatabaseFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,21 +31,24 @@ public abstract class BasicIndexTest {
     protected static final int COUNT = 10000;
     protected static final int RUNS = 10;
     protected ImpermanentGraphDatabase db;
-    protected Transaction tx;
     protected IndexDefinition indexDefinition;
 
     @Test
     public void testCreateAddIndex() throws Exception {
-        final Iterable<IndexDefinition> indexes = db.schema().getIndexes(LABEL);
-        final IndexDefinition index = IteratorUtil.single(indexes);
-        assertEquals(LABEL.name(), index.getLabel().name());
-        tx = db.beginTx();
-        final Node node = db.createNode(LABELS);
-        node.setProperty(PROPERTY, 42);
-        tx.success();
-        tx.finish();
-        final ResourceIterable<Node> nodes = db.findNodesByLabelAndProperty(LABEL, PROPERTY, 42);
-        assertEquals(node, IteratorUtil.single(nodes));
+        try (Transaction tx = db.beginTx()) {
+            final Iterable<IndexDefinition> indexes = db.schema().getIndexes(LABEL);
+            final IndexDefinition index = IteratorUtil.single(indexes);
+            assertEquals(LABEL.name(), index.getLabel().name());
+            tx.success();
+        }
+        Node node;
+        try (Transaction tx = db.beginTx()) {
+            node = db.createNode(LABELS);
+            node.setProperty(PROPERTY, 42);
+            final ResourceIterable<Node> nodes = db.findNodesByLabelAndProperty(LABEL, PROPERTY, 42);
+            assertEquals(node, IteratorUtil.single(nodes));
+            tx.success();
+        }
     }
 
     @Test
@@ -75,14 +79,14 @@ public abstract class BasicIndexTest {
     public void insertManyNodesWithIndex(PropertyValue propertyValue) throws Exception {
         long time=System.currentTimeMillis();
         for (int run=0;run<RUNS;run++) {
-        tx = db.beginTx();
-        for (int i=0;i<COUNT;i++) {
-            final Node node = db.createNode(LABELS);
-            // todo concurrentmodification exception node.setProperty(PROPERTY, 42);
-            node.setProperty(PROPERTY, propertyValue.from(i));
-        }
-        tx.success();
-        tx.finish();
+            try (Transaction tx = db.beginTx()) {
+                for (int i = 0; i < COUNT; i++) {
+                    final Node node = db.createNode(LABELS);
+                    // todo concurrentmodification exception node.setProperty(PROPERTY, 42);
+                    node.setProperty(PROPERTY, propertyValue.from(i));
+                }
+                tx.success();
+            }
         }
         time = System.currentTimeMillis() - time;
         final String type = propertyValue.from(0).getClass().getSimpleName();
@@ -92,25 +96,28 @@ public abstract class BasicIndexTest {
     @Before
     public void setUp() throws IOException {
         FileUtils.deleteRecursively(new File("test-data"));
-        db = new ImpermanentGraphDatabase();
+        db = (ImpermanentGraphDatabase) new TestGraphDatabaseFactory().newImpermanentDatabase();
         createIndex();
     }
 
     protected void createIndex() {
-        tx = db.beginTx();
-        final IndexCreator indexCreator = db.schema().indexCreator(LABEL).on(PROPERTY);
-        indexDefinition = indexCreator.create();
-        tx.success();
-        tx.finish();
-        db.schema().awaitIndexOnline(indexDefinition, 5, TimeUnit.SECONDS);
+        try (Transaction tx = db.beginTx()) {
+            final IndexCreator indexCreator = db.schema().indexFor(LABEL).on(PROPERTY);
+            indexDefinition = indexCreator.create();
+            tx.success();
+        }
+        try (Transaction tx = db.beginTx()) {
+            db.schema().awaitIndexOnline(indexDefinition, 5, TimeUnit.SECONDS);
+            tx.success();
+        }
     }
 
     @After
     public void tearDown() throws Exception {
         if (indexDefinition==null) return;
-        tx = db.beginTx();
-        indexDefinition.drop();
-        tx.success();
-        tx.finish();
+        try (Transaction tx = db.beginTx()) {
+            indexDefinition.drop();
+            tx.success();
+        }
     }
 }

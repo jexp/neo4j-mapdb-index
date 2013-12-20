@@ -7,6 +7,8 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.index.*;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
+import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
+import org.neo4j.kernel.impl.util.PrimitiveLongIteratorForArray;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,7 +60,12 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     @Override
-    public MapDbIndex getOnlineAccessor(long indexId) {
+    public String getPopulationFailure(long indexId) throws IllegalStateException {
+        throw new UnsupportedOperationException(); // TODO
+    }
+
+    @Override
+    public IndexAccessor getOnlineAccessor(long indexId, IndexConfiguration config) throws IOException {
         MapDbIndex index = indexes.get(indexId);
         if (index == null || index.state != InternalIndexState.ONLINE)
             throw new IllegalStateException("Index " + indexId + " not online yet");
@@ -72,14 +79,14 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     @Override
-    public MapDbIndex getPopulator(long indexId) {
+    public IndexPopulator getPopulator(long indexId, IndexConfiguration config) {
         BTreeMap<Object,long[]> map = db.getTreeMap(String.valueOf(indexId));
         MapDbIndex index = new MapDbIndex(map,db);
         indexes.put(indexId, index);
         return index;
     }
 
-    public static class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator {
+    public static class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator, IndexUpdater {
         private final BTreeMap<Object,long[]> indexData;
         private final DB db;
         private InternalIndexState state = InternalIndexState.POPULATING;
@@ -101,6 +108,49 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             nodes = Arrays.copyOfRange(nodes, 0, nodes.length + 1);
             nodes[nodes.length-1]=nodeId;
             indexData.replace(propertyValue, nodes);
+        }
+
+        @Override
+        public void process(NodePropertyUpdate update) throws IOException, IndexEntryConflictException {
+            switch (update.getUpdateMode()) {
+                case ADDED:
+                    add(update.getNodeId(), update.getValueAfter());
+                    break;
+                case CHANGED:
+                    removed(update.getNodeId(), update.getValueBefore());
+                    add(update.getNodeId(), update.getValueAfter());
+                    break;
+                case REMOVED:
+                    removed(update.getNodeId(), update.getValueBefore());
+                    break;
+                default:
+                    throw new UnsupportedOperationException();
+            }
+        }
+
+        @Override
+        public void remove(Iterable<Long> nodeIds) throws IOException {
+
+            Iterator<Map.Entry<Object,long[]>> entries = indexData.entrySet().iterator();
+            while (entries.hasNext()) {
+                Map.Entry<Object, long[]> entry = entries.next();
+                long[] nodes = entry.getValue();
+                int existingCount = nodes.length;
+                for (Long nodeId : nodeIds) {
+                    int idx = indexOf(nodes, nodeId);
+                    if (idx != -1) {
+                        if (existingCount == 1) {
+                            entries.remove();
+                            break;
+                        } else {
+                            System.arraycopy(nodes,idx,nodes,idx-1, existingCount-idx-1);
+                            nodes = Arrays.copyOfRange(nodes, 0, existingCount - 1);
+                            entry.setValue(nodes);
+                            existingCount--;
+                        }
+                    }
+                }
+            }
         }
 
         private void removed(long nodeId, Object propertyValue) {
@@ -125,36 +175,14 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             return -1;
         }
 
-
         @Override
-        public void update(Iterable<NodePropertyUpdate> updates) {
-            for (NodePropertyUpdate update : updates) {
-                switch (update.getUpdateMode()) {
-                    case ADDED:
-                        add(update.getNodeId(), update.getValueAfter());
-                        break;
-                    case CHANGED:
-                        removed(update.getNodeId(), update.getValueBefore());
-                        add(update.getNodeId(), update.getValueAfter());
-                        break;
-                    case REMOVED:
-                        removed(update.getNodeId(), update.getValueBefore());
-                        break;
-                    default:
-                        throw new UnsupportedOperationException();
-                }
-            }
-            db.commit();
+        public IndexUpdater newPopulatingUpdater() throws IOException {
+            return this;
         }
 
         @Override
-        public void updateAndCommit(Iterable<NodePropertyUpdate> updates) {
-            update(updates);
-        }
-
-        @Override
-        public void recover(Iterable<NodePropertyUpdate> updates) throws IOException {
-            update(updates);
+        public void markAsFailed(String failure) throws IOException {
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -196,6 +224,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     private static class MapDbIndexReader implements IndexReader {
+        private static final long[] EMPTY_LONGS = new long[0];
         private BTreeMap<Object, long[]> snapshot;
 
         MapDbIndexReader(BTreeMap<Object, long[]> snapshot) {
@@ -203,27 +232,9 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         }
 
         @Override
-        public Iterator<Long> lookup(Object value) {
+        public PrimitiveLongIterator lookup(Object value) {
             final long[] result = snapshot.get(value);
-            return result == null || result.length==0 ? IteratorUtil.<Long>emptyIterator() : new Iterator<Long>() {
-                int idx=0;
-                private final int length = result.length;
-
-                @Override
-                public boolean hasNext() {
-                    return idx < length;
-                }
-
-                @Override
-                public Long next() {
-                    return result[idx++];
-                }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
-            };
+            return new PrimitiveLongIteratorForArray(result == null || result.length==0 ? EMPTY_LONGS : result);
         }
 
         @Override

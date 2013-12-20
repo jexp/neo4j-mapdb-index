@@ -36,7 +36,7 @@ public class RawMapDbTest {
         final Comparator<Object> comparator = null;
         final BTreeKeySerializer<Object> keySerializer = null;
         final Serializer<long[]> valueSerializer = null;
-        map = db.createTreeMap("test", 64, false, false, keySerializer, valueSerializer, comparator);
+        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer).valueSerializer(valueSerializer).keepCounter(false).nodeSize(64).valuesStoredOutsideNodes(false).make();
     }
 
     @After
