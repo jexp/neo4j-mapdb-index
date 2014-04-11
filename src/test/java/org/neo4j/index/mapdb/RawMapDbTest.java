@@ -17,7 +17,7 @@ public class RawMapDbTest {
 
     protected static final int COUNT = 10000;
     protected static final int RUNS = 100;
-    private BTreeMap<Object,long[]> map;
+    private BTreeMap<Object, long[]> map;
     private DB db;
 
     @Before
@@ -27,8 +27,8 @@ public class RawMapDbTest {
         FileUtils.deleteRecursively(directory);
         db = DBMaker
                 .newFileDB(directory)
-                .compressionEnable()
-                .asyncFlushDelay(0)
+                .compressionEnable().asyncWriteFlushDelay(0)
+
                 .closeOnJvmShutdown()
                 .make();
 
@@ -36,7 +36,8 @@ public class RawMapDbTest {
         final Comparator<Object> comparator = null;
         final BTreeKeySerializer<Object> keySerializer = null;
         final Serializer<long[]> valueSerializer = null;
-        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer).valueSerializer(valueSerializer).keepCounter(false).nodeSize(64).valuesStoredOutsideNodes(false).make();
+        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer).valueSerializer(valueSerializer)
+                .counterEnable().nodeSize(64).make();
     }
 
     @After
@@ -47,17 +48,29 @@ public class RawMapDbTest {
 
     @Test
     public void testInsertPerformanceWithIntValues() throws Exception {
-        insertManyNodesWithIndex(new PropertyValue() { public Object from(int value) { return value; } });
+        insertManyNodesWithIndex(new PropertyValue() {
+            public Object from(int value) {
+                return value;
+            }
+        });
     }
 
     @Test
     public void testInsertPerformanceWithLongValues() throws Exception {
-        insertManyNodesWithIndex(new PropertyValue() { public Object from(int value) { return (long) value; } });
+        insertManyNodesWithIndex(new PropertyValue() {
+            public Object from(int value) {
+                return (long) value;
+            }
+        });
     }
 
     @Test
     public void testInsertPerformanceWithStringValues() throws Exception {
-        insertManyNodesWithIndex(new PropertyValue() { public Object from(int value) { return String.valueOf(value); } });
+        insertManyNodesWithIndex(new PropertyValue() {
+            public Object from(int value) {
+                return String.valueOf(value);
+            }
+        });
     }
 
     public void insertManyNodesWithIndex(PropertyValue propertyValue) throws Exception {

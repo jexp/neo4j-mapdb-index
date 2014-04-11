@@ -3,16 +3,19 @@ package org.neo4j.index.mapdb;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.api.index.*;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
+import org.neo4j.kernel.impl.api.index.UpdateMode;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
 import org.neo4j.kernel.impl.util.PrimitiveLongIteratorForArray;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
 
 import static org.neo4j.index.mapdb.MapDbIndexProviderFactory.PROVIDER_DESCRIPTOR;
 
@@ -34,7 +37,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         db = DBMaker
                 .newFileDB(getIndexFile(config))
                 .compressionEnable()
-                .asyncFlushDelay(1)
+                .asyncWriteFlushDelay(1)
                 .closeOnJvmShutdown()
                 .make();
 
@@ -64,6 +67,20 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         throw new UnsupportedOperationException(); // TODO
     }
 
+    /**
+     * Used for initially populating a created index, using batch insertion.
+     *
+     * @param indexId
+     * @param descriptor
+     * @param config
+     */
+    @Override
+    public IndexPopulator getPopulator(long indexId, IndexDescriptor descriptor, IndexConfiguration config) {
+
+        return getPopulator(indexId, config);
+
+    }
+
     @Override
     public IndexAccessor getOnlineAccessor(long indexId, IndexConfiguration config) throws IOException {
         MapDbIndex index = indexes.get(indexId);
@@ -78,7 +95,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         return index != null ? index.state : InternalIndexState.POPULATING;
     }
 
-    @Override
+
     public IndexPopulator getPopulator(long indexId, IndexConfiguration config) {
         BTreeMap<Object,long[]> map = db.getTreeMap(String.valueOf(indexId));
         MapDbIndex index = new MapDbIndex(map,db);
@@ -108,6 +125,47 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             nodes = Arrays.copyOfRange(nodes, 0, nodes.length + 1);
             nodes[nodes.length-1]=nodeId;
             indexData.replace(propertyValue, nodes);
+        }
+
+        /**
+         * Verify constraints for all entries added so far.
+         *
+         * @param accessor
+         */
+        @Override
+        public void verifyDeferredConstraints(org.neo4j.kernel.api.index.PropertyAccessor accessor) throws Exception {
+
+        }
+
+        /**
+         * Return an updater for applying a set of changes to this index, generally this will be a set of changes from a
+         * transaction.
+         * <p/>
+         * Index population goes through the existing data in the graph and feeds relevant data to this populator.
+         * Simultaneously as population progresses there might be incoming updates
+         * from committing transactions, which needs to be applied as well. This populator will only receive updates
+         * for nodes that it already has seen. Updates coming in here must be applied idempotently as the same data
+         * may have been {@link #add(long, Object) added previously}.
+         * Updates can come in two different {@link org.neo4j.kernel.api.index.NodePropertyUpdate#getUpdateMode() modes}.
+         * <ol>
+         * <li>{@link UpdateMode#ADDED} means that there's an added property to a node already seen by this
+         * populator and so needs to be added. Note that this addition needs to be applied idempotently.
+         * <li>{@link UpdateMode#CHANGED} means that there's a change to a property for a node already seen by
+         * this populator and that this new change needs to be applied. Note that this change needs to be
+         * applied idempotently.</li>
+         * <li>{@link UpdateMode#REMOVED} means that a property already seen by this populator or even the node itself
+         * has been removed and need to be removed from this index as well. Note that this removal needs to be
+         * applied idempotently.</li>
+         * </ol>
+         *
+         * @param accessor
+         */
+        @Override
+        public org.neo4j.kernel.api.index.IndexUpdater newPopulatingUpdater(org.neo4j.kernel.api.index.PropertyAccessor accessor) throws java.io.IOException {
+            //org.neo4j.kernel.impl.api.index.UpdateMode um = new IndexAccessor(accessor);
+
+            return newUpdater(IndexUpdateMode.ONLINE);
+            //return null;
         }
 
         @Override
@@ -175,10 +233,6 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             return -1;
         }
 
-        @Override
-        public IndexUpdater newPopulatingUpdater() throws IOException {
-            return this;
-        }
 
         @Override
         public void markAsFailed(String failure) throws IOException {
