@@ -5,7 +5,6 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.neo4j.kernel.api.index.*;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 import org.neo4j.kernel.impl.api.index.UpdateMode;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
@@ -163,8 +162,8 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         @Override
         public org.neo4j.kernel.api.index.IndexUpdater newPopulatingUpdater(org.neo4j.kernel.api.index.PropertyAccessor accessor) throws java.io.IOException {
             //org.neo4j.kernel.impl.api.index.UpdateMode um = new IndexAccessor(accessor);
+            return this;
 
-            return newUpdater(IndexUpdateMode.ONLINE);
             //return null;
         }
 
