@@ -28,7 +28,7 @@ public class RawMapDbTest {
         db = DBMaker
                 .newFileDB(directory)
                 .compressionEnable()
-                .asyncFlushDelay(0)
+                .asyncWriteFlushDelay(0)
                 .closeOnJvmShutdown()
                 .make();
 
@@ -36,7 +36,8 @@ public class RawMapDbTest {
         final Comparator<Object> comparator = null;
         final BTreeKeySerializer<Object> keySerializer = null;
         final Serializer<long[]> valueSerializer = null;
-        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer).valueSerializer(valueSerializer).keepCounter(false).nodeSize(64).valuesStoredOutsideNodes(false).make();
+        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer)
+                .valueSerializer(valueSerializer).nodeSize(64).make();
     }
 
     @After

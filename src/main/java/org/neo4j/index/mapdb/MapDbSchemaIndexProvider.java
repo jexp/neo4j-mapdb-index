@@ -3,12 +3,11 @@ package org.neo4j.index.mapdb;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.collection.primitive.PrimitiveLongCollections;
+import org.neo4j.collection.primitive.PrimitiveLongIterator;
 import org.neo4j.kernel.api.index.*;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
-import org.neo4j.kernel.impl.util.PrimitiveLongIterator;
-import org.neo4j.kernel.impl.util.PrimitiveLongIteratorForArray;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +17,8 @@ import static org.neo4j.index.mapdb.MapDbIndexProviderFactory.PROVIDER_DESCRIPTO
 
 /**
  * @author mh
- * @since 03.05.13
+ * @author tschweer
+ * @since 01.12.14
  */
 public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     static int PRIORITY;
@@ -34,7 +34,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         db = DBMaker
                 .newFileDB(getIndexFile(config))
                 .compressionEnable()
-                .asyncFlushDelay(1)
+                .asyncWriteFlushDelay(1)
                 .closeOnJvmShutdown()
                 .make();
 
@@ -77,9 +77,10 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         MapDbIndex index = indexes.get(indexId);
         return index != null ? index.state : InternalIndexState.POPULATING;
     }
+    
 
     @Override
-    public IndexPopulator getPopulator(long indexId, IndexConfiguration config) {
+    public IndexPopulator getPopulator(long indexId, IndexDescriptor descriptor, IndexConfiguration config) {
         BTreeMap<Object,long[]> map = db.getTreeMap(String.valueOf(indexId));
         MapDbIndex index = new MapDbIndex(map,db);
         indexes.put(indexId, index);
@@ -174,9 +175,15 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             }
             return -1;
         }
+        
+        @Override
+        @Deprecated
+        public void verifyDeferredConstraints(PropertyAccessor accessor) throws Exception {
+            // constraints are checked in add() so do nothing
+        }
 
         @Override
-        public IndexUpdater newPopulatingUpdater() throws IOException {
+        public IndexUpdater newPopulatingUpdater(PropertyAccessor accessor) throws IOException {
             return this;
         }
 
@@ -221,6 +228,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         public IndexReader newReader() {
             return new MapDbIndexReader((BTreeMap<Object, long[]>) indexData.snapshot());
         }
+
     }
 
     private static class MapDbIndexReader implements IndexReader {
@@ -234,8 +242,14 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         @Override
         public PrimitiveLongIterator lookup(Object value) {
             final long[] result = snapshot.get(value);
-            return new PrimitiveLongIteratorForArray(result == null || result.length==0 ? EMPTY_LONGS : result);
+            return PrimitiveLongCollections.iterator(result == null || result.length==0 ? EMPTY_LONGS : result);
         }
+        
+        @Override
+        public int getIndexedCount(long nodeId, Object propertyValue) {
+            final long[] result = snapshot.get(propertyValue);
+            return result == null ? 0 : result.length;
+        }        
 
         @Override
         public void close() {
@@ -243,4 +257,5 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
             snapshot=null;
         }
     }
+
 }
