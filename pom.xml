@@ -10,8 +10,8 @@
     <version>1.0.1</version>
 
     <properties>
-        <neo4j.version>2.1.6</neo4j.version>
-        <mapdb.version>1.0.6</mapdb.version>
+        <neo4j.version>2.1.7</neo4j.version>
+        <mapdb.version>1.0.7</mapdb.version>
     </properties>
 
     <dependencies>

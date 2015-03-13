@@ -2,6 +2,7 @@ package org.neo4j.index.mapdb;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mapdb.BTreeKeySerializer;
 import org.mapdb.BTreeMap;
@@ -13,6 +14,7 @@ import org.neo4j.kernel.impl.util.FileUtils;
 import java.io.File;
 import java.util.Comparator;
 
+@Ignore
 public class RawMapDbTest {
 
     protected static final int COUNT = 10000;
@@ -28,6 +30,7 @@ public class RawMapDbTest {
         db = DBMaker
                 .newFileDB(directory)
                 .compressionEnable()
+                .snapshotEnable()
                 .asyncWriteFlushDelay(0)
                 .closeOnJvmShutdown()
                 .make();

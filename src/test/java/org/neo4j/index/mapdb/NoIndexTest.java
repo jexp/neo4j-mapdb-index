@@ -2,6 +2,7 @@ package org.neo4j.index.mapdb;
 
 import org.junit.Ignore;
 import org.junit.Test;
+import org.neo4j.graphdb.Label;
 
 /**
  * @author mh
@@ -9,7 +10,7 @@ import org.junit.Test;
  */
 public class NoIndexTest extends BasicIndexTest {
     @Override
-    protected void createIndex() {
+    protected void createIndex(Label l) {
     }
 
     @Test

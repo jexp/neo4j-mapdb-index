@@ -38,6 +38,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         this.db = DBMaker
                 .newFileDB(this.getIndexFile(config))
                 .compressionEnable()
+                .snapshotEnable()
                 .asyncWriteFlushDelay(1)
                 .closeOnJvmShutdown()
                 .make();

@@ -15,6 +15,7 @@ import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.PropertyAccessor;
+import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
 
 public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator, IndexUpdater {
 
@@ -23,6 +24,11 @@ public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator,
     private final DB db;
 
     private InternalIndexState state = InternalIndexState.POPULATING;
+
+    @Override
+    public IndexUpdater newUpdater(final IndexUpdateMode mode) {
+        return this;
+    }
 
     public MapDbIndex(final BTreeMap<Object,long[]> map, final DB db) {
         this.indexData = map;
