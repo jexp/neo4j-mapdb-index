@@ -13,7 +13,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.source.version>1.7</java.source.version>
 		<java.target.version>1.7</java.target.version>
-		<neo4j.version>2.1.7</neo4j.version>
+		<neo4j.version>2.2.0</neo4j.version>
 		<mapdb.version>1.0.7</mapdb.version>
 		<junit.version>4.11</junit.version>
 		<maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
@@ -32,6 +32,13 @@
 			<artifactId>neo4j-kernel</artifactId>
 			<version>${neo4j.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.neo4j</groupId>
+			<artifactId>neo4j-io</artifactId>
+			<version>${neo4j.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.neo4j</groupId>

@@ -7,6 +7,9 @@ import java.util.Map;
 
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
+import org.neo4j.collection.primitive.PrimitiveLongIterator;
+import org.neo4j.collection.primitive.PrimitiveLongSet;
+import org.neo4j.kernel.api.exceptions.index.IndexCapacityExceededException;
 import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.index.IndexPopulator;
@@ -15,7 +18,9 @@ import org.neo4j.kernel.api.index.IndexUpdater;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.NodePropertyUpdate;
 import org.neo4j.kernel.api.index.PropertyAccessor;
+import org.neo4j.kernel.api.index.Reservation;
 import org.neo4j.kernel.impl.api.index.IndexUpdateMode;
+import org.neo4j.register.Register;
 
 public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator, IndexUpdater {
 
@@ -53,6 +58,13 @@ public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator,
         this.indexData.replace(propertyValue, nodes);
     }
 
+    @Override public Reservation validate(final Iterable<NodePropertyUpdate> updates) throws IOException, IndexCapacityExceededException {
+
+        // TODO
+
+        return null;
+    }
+
     @Override
     public void process(final NodePropertyUpdate update) throws IOException, IndexEntryConflictException {
         switch (update.getUpdateMode()) {
@@ -72,14 +84,20 @@ public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator,
     }
 
     @Override
-    public void remove(final Iterable<Long> nodeIds) throws IOException {
+    public void remove(final PrimitiveLongSet nodeIds) throws IOException {
 
         final Iterator<Map.Entry<Object,long[]>> entries = this.indexData.entrySet().iterator();
         while (entries.hasNext()) {
             final Map.Entry<Object, long[]> entry = entries.next();
             long[] nodes = entry.getValue();
             int existingCount = nodes.length;
-            for (final Long nodeId : nodeIds) {
+
+            final PrimitiveLongIterator nodeIdIter = nodeIds.iterator();
+
+            while(nodeIdIter.hasNext()) {
+
+                final long nodeId = nodeIdIter.next();
+
                 final int idx = this.indexOf(nodes, nodeId);
                 if (idx != -1) {
                     if (existingCount == 1) {
@@ -132,6 +150,13 @@ public class MapDbIndex extends IndexAccessor.Adapter implements IndexPopulator,
     @Override
     public void markAsFailed(final String failure) throws IOException {
         throw new UnsupportedOperationException();
+    }
+
+    @Override public long sampleResult(final Register.DoubleLong.Out result) {
+
+        // TODO
+
+        return 0;
     }
 
     @Override

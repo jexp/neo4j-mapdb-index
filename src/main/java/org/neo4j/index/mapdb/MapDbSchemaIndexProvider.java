@@ -10,6 +10,7 @@ import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.neo4j.index.mapdb.provider.MapDbIndex;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.index.IndexAccessor;
 import org.neo4j.kernel.api.index.IndexConfiguration;
 import org.neo4j.kernel.api.index.IndexDescriptor;
@@ -17,11 +18,15 @@ import org.neo4j.kernel.api.index.IndexPopulator;
 import org.neo4j.kernel.api.index.InternalIndexState;
 import org.neo4j.kernel.api.index.SchemaIndexProvider;
 import org.neo4j.kernel.configuration.Config;
+import org.neo4j.kernel.impl.api.index.sampling.IndexSamplingConfig;
+import org.neo4j.kernel.impl.storemigration.StoreMigrationParticipant;
+import org.neo4j.kernel.impl.storemigration.UpgradableDatabase;
 import org.neo4j.kernel.impl.util.CopyOnWriteHashMap;
 
 /**
  * @author mh
  * @author tschweer
+ * @author zazi
  * @since 01.12.14
  */
 public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
@@ -70,7 +75,7 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
     }
 
     @Override
-    public IndexAccessor getOnlineAccessor(final long indexId, final IndexConfiguration config) throws IOException {
+    public IndexAccessor getOnlineAccessor(final long indexId, final IndexConfiguration config, final IndexSamplingConfig samplingConfig) throws IOException {
         final MapDbIndex index = this.indexes.get(indexId);
         if (index == null || index.getState() != InternalIndexState.ONLINE)
             throw new IllegalStateException("Index " + indexId + " not online yet");
@@ -83,8 +88,16 @@ public class MapDbSchemaIndexProvider extends SchemaIndexProvider {
         return index != null ? index.getState() : InternalIndexState.POPULATING;
     }
 
+    @Override public StoreMigrationParticipant storeMigrationParticipant(final FileSystemAbstraction fs, final UpgradableDatabase upgradableDatabase) {
+
+        // TODO
+
+        return null;
+    }
+
     @Override
-    public IndexPopulator getPopulator(final long indexId, final IndexDescriptor descriptor, final IndexConfiguration config) {
+    public IndexPopulator getPopulator(final long indexId, final IndexDescriptor descriptor, final IndexConfiguration config,
+            final IndexSamplingConfig samplingConfig) {
         final BTreeMap<Object,long[]> map = this.db.getTreeMap(String.valueOf(indexId));
         final MapDbIndex index = new MapDbIndex(map,this.db);
         this.indexes.put(indexId, index);
