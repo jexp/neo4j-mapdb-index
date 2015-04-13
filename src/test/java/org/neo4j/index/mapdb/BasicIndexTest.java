@@ -8,7 +8,7 @@ import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexCreator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.helpers.collection.IteratorUtil;
-import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.ImpermanentGraphDatabase;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
@@ -25,11 +25,11 @@ import static org.junit.Assert.assertEquals;
 @Ignore
 public abstract class BasicIndexTest {
 
-    private static final Label LABEL = DynamicLabel.label("foo");
+    private static final Label LABEL = DynamicLabel.label("fooint");
     protected static final Label[] LABELS = new Label[]{LABEL};
     protected String PROPERTY = "bar";
-    protected static final int COUNT = 10000;
-    protected static final int RUNS = 10;
+    protected static final int COUNT = 100000;
+    protected static final int RUNS = 1;
     protected ImpermanentGraphDatabase db;
     protected IndexDefinition indexDefinition;
 
@@ -57,7 +57,7 @@ public abstract class BasicIndexTest {
             public Object from(int value) {
                 return value;
             }
-        });
+        }, "int");
     }
     @Test
     public void testInsertPerformanceWithLongValues() throws Exception {
@@ -65,7 +65,7 @@ public abstract class BasicIndexTest {
             public Object from(int value) {
                 return (long) value;
             }
-        });
+        },"long");
     }
     @Test
     public void testInsertPerformanceWithStringValues() throws Exception {
@@ -73,15 +73,17 @@ public abstract class BasicIndexTest {
             public Object from(int value) {
                 return String.valueOf(value);
             }
-        });
+        }, "string");
     }
 
-    public void insertManyNodesWithIndex(PropertyValue propertyValue) throws Exception {
+    public void insertManyNodesWithIndex(PropertyValue propertyValue, String ext) throws Exception {
+        final Label label = DynamicLabel.label("foo"+ ext);
+        final Label[] labels = new Label[]{label};
         long time=System.currentTimeMillis();
         for (int run=0;run<RUNS;run++) {
             try (Transaction tx = db.beginTx()) {
                 for (int i = 0; i < COUNT; i++) {
-                    final Node node = db.createNode(LABELS);
+                    final Node node = db.createNode(labels);
                     // todo concurrentmodification exception node.setProperty(PROPERTY, 42);
                     node.setProperty(PROPERTY, propertyValue.from(i));
                 }
@@ -97,12 +99,14 @@ public abstract class BasicIndexTest {
     public void setUp() throws IOException {
         FileUtils.deleteRecursively(new File("test-data"));
         db = (ImpermanentGraphDatabase) new TestGraphDatabaseFactory().newImpermanentDatabase();
-        createIndex();
+        createIndex(DynamicLabel.label("fooint"));
+        createIndex(DynamicLabel.label("foolong"));
+        createIndex(DynamicLabel.label("foostring"));
     }
 
-    protected void createIndex() {
+    protected void createIndex(Label label) {
         try (Transaction tx = db.beginTx()) {
-            final IndexCreator indexCreator = db.schema().indexFor(LABEL).on(PROPERTY);
+            final IndexCreator indexCreator = db.schema().indexFor(label).on(PROPERTY);
             indexDefinition = indexCreator.create();
             tx.success();
         }

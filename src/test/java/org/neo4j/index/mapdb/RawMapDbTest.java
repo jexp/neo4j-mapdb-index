@@ -2,17 +2,19 @@ package org.neo4j.index.mapdb;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mapdb.BTreeKeySerializer;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
-import org.neo4j.kernel.impl.util.FileUtils;
+import org.neo4j.io.fs.FileUtils;
 
 import java.io.File;
 import java.util.Comparator;
 
+@Ignore
 public class RawMapDbTest {
 
     protected static final int COUNT = 10000;
@@ -28,7 +30,8 @@ public class RawMapDbTest {
         db = DBMaker
                 .newFileDB(directory)
                 .compressionEnable()
-                .asyncFlushDelay(0)
+                .snapshotEnable()
+                .asyncWriteFlushDelay(0)
                 .closeOnJvmShutdown()
                 .make();
 
@@ -36,7 +39,8 @@ public class RawMapDbTest {
         final Comparator<Object> comparator = null;
         final BTreeKeySerializer<Object> keySerializer = null;
         final Serializer<long[]> valueSerializer = null;
-        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer).valueSerializer(valueSerializer).keepCounter(false).nodeSize(64).valuesStoredOutsideNodes(false).make();
+        map = db.createTreeMap("test").comparator(comparator).keySerializer(keySerializer)
+                .valueSerializer(valueSerializer).nodeSize(64).make();
     }
 
     @After
